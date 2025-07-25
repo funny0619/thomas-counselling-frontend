@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
 import { createPinia } from 'pinia'
 import './style.css' // Using the default Vite CSS. Replace with your own global styles.
 import router from './router'
