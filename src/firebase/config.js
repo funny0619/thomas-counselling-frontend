@@ -10,6 +10,23 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-const app = initializeApp(firebaseConfig)
+let app = null
+let auth = null
 
-export const auth = getAuth(app) 
+try {
+  app = initializeApp(firebaseConfig)
+  auth = getAuth(app)
+} catch (error) {
+  console.warn('Firebase initialization failed:', error)
+  // Create a mock auth object to prevent errors
+  auth = {
+    currentUser: null,
+    onAuthStateChanged: () => () => { }, // Return unsubscribe function
+    signOut: () => Promise.resolve(),
+    signInWithEmailAndPassword: () => Promise.reject(new Error('Firebase not available')),
+    createUserWithEmailAndPassword: () => Promise.reject(new Error('Firebase not available')),
+    signInWithPopup: () => Promise.reject(new Error('Firebase not available'))
+  }
+}
+
+export { auth }

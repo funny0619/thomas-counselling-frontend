@@ -13,8 +13,13 @@ app.use(router)
 
 // Initialize authentication before mounting the app
 async function initializeApp() {
-    const authStore = useAuthStore()
-    await authStore.initializeAuth()
+    try {
+        const authStore = useAuthStore()
+        await authStore.initializeAuth()
+    } catch (error) {
+        console.warn('Firebase authentication initialization failed:', error)
+        // Continue loading the app even if Firebase fails
+    }
     app.mount('#app')
 }
 
