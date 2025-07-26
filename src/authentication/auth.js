@@ -35,42 +35,55 @@ export const useAuthStore = defineStore('auth', {
     actions: {
         async initializeAuth() {
             return new Promise((resolve) => {
-                const unsubscribe = onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        // Check email verification status first
-                        if (!user.emailVerified) {
-                            await signOut(auth)
-                            this.clearAuth()
-                            this.isInitialized = true
-                            unsubscribe()
-                            resolve()
-                            return
-                        }
-
-                        // Validate token and update if needed
-                        try {
-                            const token = await user.getIdToken(true) // Force refresh
-                            this.idToken = token
-                            this.user = {
-                                email: user.email,
-                                uid: user.uid,
-                                displayName: user.displayName
+                try {
+                    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            // Check email verification status first
+                            if (!user.emailVerified) {
+                                try {
+                                    await signOut(auth)
+                                } catch (error) {
+                                    console.warn('Failed to sign out user:', error)
+                                }
+                                this.clearAuth()
+                                this.isInitialized = true
+                                unsubscribe()
+                                resolve()
+                                return
                             }
-                            localStorage.setItem('idToken', token)
-                            localStorage.setItem('user', JSON.stringify(this.user))
 
-                            // Connect to SSE after successful auth
-                            this.connectSSE()
-                        } catch (error) {
+                            // Validate token and update if needed
+                            try {
+                                const token = await user.getIdToken(true) // Force refresh
+                                this.idToken = token
+                                this.user = {
+                                    email: user.email,
+                                    uid: user.uid,
+                                    displayName: user.displayName
+                                }
+                                localStorage.setItem('idToken', token)
+                                localStorage.setItem('user', JSON.stringify(this.user))
+
+                                // Connect to SSE after successful auth
+                                this.connectSSE()
+                            } catch (error) {
+                                console.warn('Failed to get user token:', error)
+                                this.clearAuth()
+                            }
+                        } else {
                             this.clearAuth()
                         }
-                    } else {
-                        this.clearAuth()
-                    }
+                        this.isInitialized = true
+                        unsubscribe()
+                        resolve()
+                    })
+                } catch (error) {
+                    console.warn('Firebase auth state listener failed:', error)
+                    // If Firebase is completely broken, just mark as initialized
+                    this.clearAuth()
                     this.isInitialized = true
-                    unsubscribe()
                     resolve()
-                })
+                }
             })
         },
 
@@ -79,7 +92,7 @@ export const useAuthStore = defineStore('auth', {
             this.user = null
             localStorage.removeItem('idToken')
             localStorage.removeItem('user')
-            
+
             // Disconnect SSE
             sseService.disconnect()
         },
@@ -121,7 +134,7 @@ export const useAuthStore = defineStore('auth', {
         async logout(router = null) {
             try {
                 await signOut(auth);
-                this.clearAuth(); 
+                this.clearAuth();
                 if (router) {
                     // Clear browser history to prevent back button access
                     router.replace({ name: 'login' });
@@ -149,9 +162,9 @@ export const useAuthStore = defineStore('auth', {
 
                 await signOut(auth);
                 this.clearAuth()
-                
+
                 if (router) {
-                    await router.push('/please-verify'); 
+                    await router.push('/please-verify');
                 }
             } catch (error) {
                 this.clearAuth()
@@ -294,7 +307,7 @@ export const useAuthStore = defineStore('auth', {
                 throw new Error('EMAIL_REAUTH_REQUIRED')
             }
         },
-        
+
         connectSSE() {
             if (!this.idToken) {
                 return
@@ -306,7 +319,7 @@ export const useAuthStore = defineStore('auth', {
             // Set up event listeners
             this.setupSSEListeners()
         },
-        
+
         setupSSEListeners() {
             // Listen for notifications - DISABLED
             // sseService.on('notification', (data) => {
@@ -318,7 +331,7 @@ export const useAuthStore = defineStore('auth', {
             //         notification.type === 'error' ? 8000 : 5000
             //     )
             // })
-            
+
             // Listen for session invitations - NOTIFICATIONS DISABLED
             sseService.on('session_invitation', (data) => {
                 // notificationService.info(
@@ -327,7 +340,7 @@ export const useAuthStore = defineStore('auth', {
                 //     6000
                 // )
             })
-            
+
             // Listen for session invitation acceptance - NOTIFICATIONS DISABLED
             sseService.on('session_invitation_accepted', (data) => {
                 // notificationService.success(
@@ -336,7 +349,7 @@ export const useAuthStore = defineStore('auth', {
                 //     5000
                 // )
             })
-            
+
             // Listen for relationship invitations
             sseService.on('relationship_invitation', (data) => {
                 notificationService.info(
@@ -345,7 +358,7 @@ export const useAuthStore = defineStore('auth', {
                     6000
                 )
             })
-            
+
             // Listen for session deletion
             sseService.on('session_deleted', (data) => {
                 notificationService.warning(
@@ -354,7 +367,7 @@ export const useAuthStore = defineStore('auth', {
                     6000
                 )
             })
-            
+
             // Listen for connection status changes
             sseService.onConnectionChange((status) => {
                 // Handle connection status changes silently

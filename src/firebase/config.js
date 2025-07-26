@@ -21,11 +21,17 @@ try {
   // Create a mock auth object to prevent errors
   auth = {
     currentUser: null,
-    onAuthStateChanged: () => () => { }, // Return unsubscribe function
+    onAuthStateChanged: (callback) => {
+      // Call the callback immediately with null user to simulate no authentication
+      setTimeout(() => callback(null), 0)
+      return () => { } // Return unsubscribe function
+    },
     signOut: () => Promise.resolve(),
     signInWithEmailAndPassword: () => Promise.reject(new Error('Firebase not available')),
     createUserWithEmailAndPassword: () => Promise.reject(new Error('Firebase not available')),
-    signInWithPopup: () => Promise.reject(new Error('Firebase not available'))
+    signInWithPopup: () => Promise.reject(new Error('Firebase not available')),
+    updateProfile: () => Promise.reject(new Error('Firebase not available')),
+    sendEmailVerification: () => Promise.reject(new Error('Firebase not available'))
   }
 }
 

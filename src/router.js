@@ -108,12 +108,17 @@ const router = createRouter({
 // Navigation Guards
 router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore()
-    
+
     // Wait for auth initialization if not already initialized
     if (!authStore.isInitialized) {
-        await authStore.initializeAuth()
+        try {
+            await authStore.initializeAuth()
+        } catch (error) {
+            console.warn('Auth initialization failed in router guard:', error)
+            // Continue with navigation even if auth fails
+        }
     }
-    
+
     // Check if route requires authentication
     if (to.meta.requiresAuth) {
         if (!authStore.isAuthenticated) {
@@ -124,11 +129,21 @@ router.beforeEach(async (to, from, next) => {
             })
             return
         }
-        
+
         // Validate token for authenticated routes
-        const isValid = await authStore.validateToken()
-        if (!isValid) {
-            // Token is invalid, redirect to login
+        try {
+            const isValid = await authStore.validateToken()
+            if (!isValid) {
+                // Token is invalid, redirect to login
+                next({
+                    name: 'login',
+                    query: { redirect: to.fullPath }
+                })
+                return
+            }
+        } catch (error) {
+            console.warn('Token validation failed:', error)
+            // If token validation fails, redirect to login
             next({
                 name: 'login',
                 query: { redirect: to.fullPath }
@@ -136,7 +151,7 @@ router.beforeEach(async (to, from, next) => {
             return
         }
     }
-    
+
     // Check if route requires guest (not authenticated)
     if (to.meta.requiresGuest) {
         if (authStore.isAuthenticated) {
@@ -145,7 +160,7 @@ router.beforeEach(async (to, from, next) => {
             return
         }
     }
-    
+
     // Allow navigation
     next()
 })
